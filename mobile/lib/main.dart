@@ -8,6 +8,7 @@ import 'features/events/page.dart';
 import 'features/resources/page.dart';
 import 'features/notifications/page.dart';
 import 'features/pipeline/page.dart';
+import 'features/trace/page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,7 @@ class _ShellState extends State<_Shell> {
     ResourcesPage(),
     NotificationsPage(),
     PipelinePage(),
+    TracePage(),
   ];
 
   @override
@@ -76,6 +78,7 @@ class _NavBar extends StatelessWidget {
     (Icons.local_hospital_outlined, Icons.local_hospital, 'Resources'),
     (Icons.notifications_outlined, Icons.notifications, 'Alerts'),
     (Icons.account_tree_outlined, Icons.account_tree, 'Pipeline'),
+    (Icons.psychology_outlined, Icons.psychology, 'Trace'),
   ];
 
   @override
@@ -89,42 +92,56 @@ class _NavBar extends StatelessWidget {
         child: SizedBox(
           height: 60,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: _items.asMap().entries.map((e) {
               final selected = e.key == current;
               final item = e.value;
-              return GestureDetector(
-                onTap: () => onTap(e.key),
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: selected ? AppColors.cyanDim : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: Icon(
-                          selected ? item.$2 : item.$1,
-                          key: ValueKey(selected),
-                          color: selected ? AppColors.cyan : AppColors.textMuted,
-                          size: 22,
-                        ),
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => onTap(e.key),
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 8),
+                      decoration: BoxDecoration(
+                        color:
+                            selected ? AppColors.cyanDim : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.$3,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: selected ? AppColors.cyan : AppColors.textMuted,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: Icon(
+                              selected ? item.$2 : item.$1,
+                              key: ValueKey(selected),
+                              color: selected
+                                  ? AppColors.cyan
+                                  : AppColors.textMuted,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.$3,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: selected
+                                  ? AppColors.cyan
+                                  : AppColors.textMuted,
+                              fontWeight: selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               );

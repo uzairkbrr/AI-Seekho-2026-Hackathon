@@ -8,7 +8,7 @@ The **Crisis Intelligence & Response Orchestrator (CIRO)** is an agentic AI syst
 
 CIRO ingests signals from multiple sources, applies multi-agent reasoning to develop situational awareness, allocates constrained resources, simulates response actions, and visualizes their outcomes. The system is built to handle real-world challenges including conflicting signals, false positives, and simultaneous crises.
 
-This prototype was developed for a competitive challenge, with strong emphasis on **Google Antigravity** for agent orchestration and a mandatory mobile application for practical field usage.
+This prototype was developed for a competitive challenge, with strong emphasis on a **structured multi-agent pipeline** for crisis orchestration and a mandatory mobile application for practical field usage.
 
 ## Key Features
 
@@ -24,35 +24,37 @@ This prototype was developed for a competitive challenge, with strong emphasis o
 
 ## System Architecture
 
-CIRO follows a modular, agent-driven architecture orchestrated primarily by Google Antigravity:
+CIRO is built as a **structured pipeline** of specialized agents, each exposed as a FastAPI endpoint and driven in sequence by the mobile Pipeline control surface:
 
-1. **Signal Ingestion Layer**: Text-based citizen reports, weather data, and traffic information
-2. **Fusion and Analysis Agents**: Source credibility evaluation, geolocation, and contradiction resolution
-3. **Reasoning Layer**: Detection, prediction, resource allocation, and action planning agents
-4. **Simulation Engine**: Execution of traffic rerouting, emergency dispatch, alerts, and state updates
-5. **Verification and Recovery Agent**: Handles inconsistencies and escalations
-6. **Presentation Layer**: Flutter Mobile Application (primary interface)
+1. **Signal Ingestion Layer** (`/ingest`): Text-based citizen reports, weather data, and traffic information
+2. **Fusion and Analysis Agent** (`/fuse`): Source credibility scoring, spatial clustering, and LLM-based event classification
+3. **Allocation Agent** (`/allocate`): Constrained resource assignment with priority scoring and trade-off reasoning
+4. **Simulation Agent** (`/simulate`): Action planning, dispatch materialization, alert zones, and road closures
+5. **Notification Agent** (`/notify`): Stakeholder-specific communications across channels and urgency levels
+6. **Verification Agent** (`/verify`): False-positive detection, escalation, and recovery
+7. **Presentation Layer**: Flutter Mobile Application (primary interface)
 
-Agent communication occurs through Antigravity’s shared memory and Workplans, providing full execution traceability.
+Agents do not call each other directly. They share state through a SQLite database (SQLAlchemy ORM), and every decision, fallback, and skip is written to an `AgentTrace` row tagged with stage, agent, event, summary, and reasoning. This gives the mobile Pipeline tab full step-by-step traceability and makes each stage independently re-runnable.
 
 ## Technology Stack
 
-- **Agent Orchestration**: Google Antigravity (core)
+- **Agent Pipeline**: Python/FastAPI — one HTTP endpoint per agent stage
+- **Agent Reasoning**: Google Gemini via the project's `LLM` wrapper, with deterministic fallbacks for degraded mode
+- **Shared State & Traces**: SQLite + SQLAlchemy, with an `AgentTrace` table recording every stage decision
 - **Mobile Application**: Flutter (Dart)
-- **Backend Services**: Python/FastAPI (optional)
 - **Mapping**: Google Maps Flutter SDK
 - **State Management**: Riverpod
-- **Mock Services**: Used as fallback where needed
+- **Mock Services**: Used as fallback where real APIs are unavailable
 
-## Google Antigravity Usage
+## Pipeline Orchestration
 
-Google Antigravity serves as the central orchestration engine. It is used for:
+The mobile **Pipeline** tab drives the end-to-end workflow by calling each backend stage in order. There is no hidden orchestrator — the pipeline is the contract:
 
-- Multi-agent Workplans managing the end-to-end crisis workflow
-- Agent collaboration and handoffs
-- Tool integration with mapping and simulation functions
-- Comprehensive traces covering observations, reasoning steps, decisions, tool calls, and outcomes
-- Recovery workflows for uncertain or conflicting scenarios
+- **Re-runnable stages**: Every stage is idempotent on already-processed records (e.g. `is_fused`, existing dispatches/zones/closures are not duplicated), so operators can re-run a stage without corrupting state.
+- **Shared memory via DB**: Each agent reads its inputs and writes its outputs to the shared database. The next stage picks up from there.
+- **Full traceability**: Every agent emits `AgentTrace` rows with `stage`, `agent`, `event_id`, `summary`, `reasoning`, and `status` (`ok` / `fallback` / `skipped`). The mobile Pipeline view fetches these per stage to render the live reasoning timeline.
+- **Recovery and escalation**: The Verification stage can flip events to `verified`, `retracted`, or `escalated` based on signal evidence, closing the loop on false positives and conflicting reports.
+- **Graceful degradation**: When an LLM call fails, each agent has a deterministic fallback path and tags the trace as `fallback` so the UI can surface the degraded decision.
 
 ## Data Sources
 

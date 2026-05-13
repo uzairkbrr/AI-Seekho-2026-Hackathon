@@ -15,6 +15,7 @@ class VerificationAgent(BaseAgent):
         super().__init__("VerificationAgent")
 
     def run(self, db):
+        self.traces = []
         events = db.query(CrisisEvent).filter(CrisisEvent.status == "active").all()
         if not events:
             return {"message": "No events"}
@@ -23,11 +24,13 @@ class VerificationAgent(BaseAgent):
         for e in events:
             sigs = db.query(Signal).filter(Signal.event_id == e.id).all()
             prompt = f"Verify event: {e.title}. Signals: " + str([s.content for s in sigs])
+            status = "ok"
             try:
                 res = json.loads(self.llm.generate(prompt, Verification, temp=0.1))
             except Exception as ex:
                 self.logger.error(f"LLM fail: {ex}")
                 res = self._fallback(e)
+                status = "fallback"
 
             log = VerificationLog(
                 event_id=e.id,
@@ -38,7 +41,7 @@ class VerificationAgent(BaseAgent):
                 retraction_message=res["retraction_message"]
             )
             db.add(log)
-            
+
             if res["verdict"] == "confirmed":
                 e.status = "verified"
             elif res["verdict"] == "false_positive":
@@ -46,6 +49,28 @@ class VerificationAgent(BaseAgent):
             elif res["verdict"] == "escalate":
                 e.status = "escalated"
                 e.severity = "Critical"
+
+            self._record(
+                db,
+                stage="verify",
+                summary=(
+                    f"Verdict: {res['verdict']} (confidence "
+                    f"{res['updated_confidence']:.2f}) → {res['corrective_action']}"
+                ),
+                reasoning=res["reasoning"],
+                event_id=e.id,
+                status=status,
+                prompt=prompt,
+                decision={
+                    "action": "verify_event",
+                    "event_id": e.id,
+                    "verdict": res["verdict"],
+                    "updated_confidence": res["updated_confidence"],
+                    "corrective_action": res["corrective_action"],
+                    "retraction_message": res.get("retraction_message"),
+                    "new_event_status": e.status,
+                },
+            )
 
             results.append({"id": e.id, "verdict": res["verdict"]})
 

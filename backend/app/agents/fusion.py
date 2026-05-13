@@ -22,6 +22,7 @@ class FusionAgent(BaseAgent):
         super().__init__("FusionAgent")
 
     def run(self, db):
+        self.traces = []
         signals = db.query(Signal).filter(Signal.is_fused == False).all()
         if not signals:
             return []
@@ -33,17 +34,39 @@ class FusionAgent(BaseAgent):
         clusters = self._cluster(signals)
         events = []
 
-        for cluster in clusters:
-            if sum([s.credibility_score for s in cluster]) / len(cluster) < 0.3:
+        for idx, cluster in enumerate(clusters):
+            avg_cred = sum([s.credibility_score for s in cluster]) / len(cluster)
+            cluster_preview = "\n".join(
+                f"- [{s.source}] {s.content}" for s in cluster[:10]
+            )
+            if avg_cred < 0.3:
+                self._record(
+                    db,
+                    stage="fuse",
+                    summary=f"Skipped cluster {idx} ({len(cluster)} signals)",
+                    reasoning=f"Avg credibility {avg_cred:.2f} < 0.3 threshold; treating as noise.",
+                    status="skipped",
+                    prompt=(
+                        f"Cluster {idx} ({len(cluster)} signals, avg credibility "
+                        f"{avg_cred:.2f}):\n\n{cluster_preview}"
+                    ),
+                    decision={
+                        "action": "skip_cluster",
+                        "cluster_size": len(cluster),
+                        "avg_credibility": round(avg_cred, 3),
+                        "threshold": 0.3,
+                    },
+                )
                 continue
 
+            status = "ok"
+            prompt = f"Analyze these crisis signals:\n\n{cluster_preview}"
             try:
-                txt = [f"- [{s.source}] {s.content}" for s in cluster[:10]]
-                prompt = f"Analyze these crisis signals:\n\n" + "\n".join(txt)
                 res = json.loads(self.llm.generate(prompt, LLMResponse))
             except Exception as e:
                 self.logger.error(f"LLM fail: {e}")
                 res = self._fallback()
+                status = "fallback"
 
             lat = sum([s.lat for s in cluster]) / len(cluster)
             lng = sum([s.lng for s in cluster]) / len(cluster)
@@ -68,10 +91,36 @@ class FusionAgent(BaseAgent):
             db.add(event)
             db.commit()
             db.refresh(event)
-            
+
             for s in cluster:
                 s.is_fused = True
                 s.event_id = event.id
+
+            reasoning = (
+                f"Classified as {res['event_type']} ({res['severity']}, "
+                f"confidence {res['confidence_score']:.2f}). "
+                f"Likely evolution: {res['likely_evolution']}. "
+                f"Spread risk: {res['spread_risk']}. "
+                f"Uncertainty: {res['uncertainty_range']}."
+            )
+            decision = {
+                "action": "create_event",
+                "event_id": event.id,
+                "cluster_size": len(cluster),
+                "centroid": {"lat": round(lat, 4), "lng": round(lng, 4)},
+                "classification": res,
+            }
+            self._record(
+                db,
+                stage="fuse",
+                summary=f"Fused {len(cluster)} signals → event #{event.id}",
+                reasoning=reasoning,
+                event_id=event.id,
+                status=status,
+                prompt=prompt,
+                decision=decision,
+            )
+
             db.commit()
             events.append(event)
 

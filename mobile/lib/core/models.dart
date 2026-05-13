@@ -117,6 +117,219 @@ class Resource {
       );
 }
 
+class RoadClosure {
+  final int id;
+  final int eventId;
+  final String label;
+  final String reason;
+  final double fromLat;
+  final double fromLng;
+  final double toLat;
+  final double toLng;
+  final String status;
+
+  RoadClosure({
+    required this.id,
+    required this.eventId,
+    required this.label,
+    required this.reason,
+    required this.fromLat,
+    required this.fromLng,
+    required this.toLat,
+    required this.toLng,
+    required this.status,
+  });
+
+  factory RoadClosure.fromJson(Map<String, dynamic> j) => RoadClosure(
+        id: j['id'],
+        eventId: j['event_id'],
+        label: j['label'] ?? '',
+        reason: j['reason'] ?? '',
+        fromLat: (j['from_lat'] ?? 0.0).toDouble(),
+        fromLng: (j['from_lng'] ?? 0.0).toDouble(),
+        toLat: (j['to_lat'] ?? 0.0).toDouble(),
+        toLng: (j['to_lng'] ?? 0.0).toDouble(),
+        status: j['status'] ?? 'active',
+      );
+}
+
+class DispatchTrack {
+  final int id;
+  final int eventId;
+  final int resourceId;
+  final int? allocationId;
+  final int units;
+  final double fromLat;
+  final double fromLng;
+  final double toLat;
+  final double toLng;
+  final double currentLat;
+  final double currentLng;
+  final double etaMinutes;
+  final double progress;
+  final String status;
+
+  DispatchTrack({
+    required this.id,
+    required this.eventId,
+    required this.resourceId,
+    required this.allocationId,
+    required this.units,
+    required this.fromLat,
+    required this.fromLng,
+    required this.toLat,
+    required this.toLng,
+    required this.currentLat,
+    required this.currentLng,
+    required this.etaMinutes,
+    required this.progress,
+    required this.status,
+  });
+
+  factory DispatchTrack.fromJson(Map<String, dynamic> j) => DispatchTrack(
+        id: j['id'],
+        eventId: j['event_id'],
+        resourceId: j['resource_id'],
+        allocationId: j['allocation_id'],
+        units: j['units'] ?? 1,
+        fromLat: (j['from_lat'] ?? 0.0).toDouble(),
+        fromLng: (j['from_lng'] ?? 0.0).toDouble(),
+        toLat: (j['to_lat'] ?? 0.0).toDouble(),
+        toLng: (j['to_lng'] ?? 0.0).toDouble(),
+        currentLat: (j['current_lat'] ?? 0.0).toDouble(),
+        currentLng: (j['current_lng'] ?? 0.0).toDouble(),
+        etaMinutes: (j['eta_minutes'] ?? 0.0).toDouble(),
+        progress: (j['progress'] ?? 0.0).toDouble(),
+        status: j['status'] ?? 'enroute',
+      );
+}
+
+class AlertZone {
+  final int id;
+  final int eventId;
+  final double centerLat;
+  final double centerLng;
+  final double radiusKm;
+  final String severity;
+  final String message;
+  final int broadcastCount;
+  final String status;
+
+  AlertZone({
+    required this.id,
+    required this.eventId,
+    required this.centerLat,
+    required this.centerLng,
+    required this.radiusKm,
+    required this.severity,
+    required this.message,
+    required this.broadcastCount,
+    required this.status,
+  });
+
+  factory AlertZone.fromJson(Map<String, dynamic> j) => AlertZone(
+        id: j['id'],
+        eventId: j['event_id'],
+        centerLat: (j['center_lat'] ?? 0.0).toDouble(),
+        centerLng: (j['center_lng'] ?? 0.0).toDouble(),
+        radiusKm: (j['radius_km'] ?? 0.0).toDouble(),
+        severity: j['severity'] ?? 'Medium',
+        message: j['message'] ?? '',
+        broadcastCount: j['broadcast_count'] ?? 0,
+        status: j['status'] ?? 'active',
+      );
+}
+
+class EmergencyTicket {
+  final int id;
+  final int eventId;
+  final String ticketCode;
+  final String category;
+  final String priority;
+  final String title;
+  final String description;
+  final String assignee;
+  final String status;
+  final double? etaMinutes;
+  final int? resourceId;
+  final int? dispatchId;
+  final int? closureId;
+  final int? zoneId;
+  final String createdAt;
+  final String? resolvedAt;
+
+  EmergencyTicket({
+    required this.id,
+    required this.eventId,
+    required this.ticketCode,
+    required this.category,
+    required this.priority,
+    required this.title,
+    required this.description,
+    required this.assignee,
+    required this.status,
+    required this.etaMinutes,
+    required this.resourceId,
+    required this.dispatchId,
+    required this.closureId,
+    required this.zoneId,
+    required this.createdAt,
+    required this.resolvedAt,
+  });
+
+  factory EmergencyTicket.fromJson(Map<String, dynamic> j) => EmergencyTicket(
+        id: j['id'],
+        eventId: j['event_id'],
+        ticketCode: j['ticket_code'] ?? '',
+        category: j['category'] ?? '',
+        priority: j['priority'] ?? 'P3',
+        title: j['title'] ?? '',
+        description: j['description'] ?? '',
+        assignee: j['assignee'] ?? '',
+        status: j['status'] ?? 'open',
+        etaMinutes: j['eta_minutes']?.toDouble(),
+        resourceId: j['resource_id'],
+        dispatchId: j['dispatch_id'],
+        closureId: j['closure_id'],
+        zoneId: j['zone_id'],
+        createdAt: j['created_at'] ?? '',
+        resolvedAt: j['resolved_at'],
+      );
+}
+
+class AlertLogEntry {
+  final int id;
+  final int? eventId;
+  final String channel;
+  final String level;
+  final String title;
+  final String message;
+  final int? ticketId;
+  final String createdAt;
+
+  AlertLogEntry({
+    required this.id,
+    required this.eventId,
+    required this.channel,
+    required this.level,
+    required this.title,
+    required this.message,
+    required this.ticketId,
+    required this.createdAt,
+  });
+
+  factory AlertLogEntry.fromJson(Map<String, dynamic> j) => AlertLogEntry(
+        id: j['id'],
+        eventId: j['event_id'],
+        channel: j['channel'] ?? '',
+        level: j['level'] ?? 'info',
+        title: j['title'] ?? '',
+        message: j['message'] ?? '',
+        ticketId: j['ticket_id'],
+        createdAt: j['created_at'] ?? '',
+      );
+}
+
 class Notification {
   final int id;
   final int eventId;
@@ -147,6 +360,45 @@ class Notification {
         urgency: j['urgency'] ?? 'Routine',
         channel: j['channel'] ?? 'Dashboard',
         createdAt: j['created_at'] ?? '',
+      );
+}
+
+class AgentTrace {
+  final int id;
+  final String agent;
+  final String stage;
+  final int? eventId;
+  final String summary;
+  final String reasoning;
+  final String? prompt;
+  final String? decision;
+  final String status;
+  final String createdAt;
+
+  AgentTrace({
+    required this.id,
+    required this.agent,
+    required this.stage,
+    required this.eventId,
+    required this.summary,
+    required this.reasoning,
+    required this.prompt,
+    required this.decision,
+    required this.status,
+    required this.createdAt,
+  });
+
+  factory AgentTrace.fromJson(Map<String, dynamic> j) => AgentTrace(
+        id: (j['id'] as num?)?.toInt() ?? 0,
+        agent: (j['agent'] ?? '').toString(),
+        stage: (j['stage'] ?? '').toString(),
+        eventId: (j['event_id'] as num?)?.toInt(),
+        summary: (j['summary'] ?? '').toString(),
+        reasoning: (j['reasoning'] ?? '').toString(),
+        prompt: j['prompt'] as String?,
+        decision: j['decision'] as String?,
+        status: (j['status'] ?? 'ok').toString(),
+        createdAt: (j['created_at'] ?? '').toString(),
       );
 }
 

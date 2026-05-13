@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -NoProfile -Command \"if \\(Get-Command flutter -ErrorAction SilentlyContinue\\) { flutter analyze lib --no-pub --no-fatal-infos 2>&1 | Select-Object -First 80 } else { 'no flutter on PATH' }\")",
+      "Bash(python -c \"import ast; [ast.parse\\(open\\(p\\).read\\(\\)\\) for p in ['app/agents/fusion.py','app/agents/allocation.py','app/agents/simulation.py','app/agents/notification.py','app/agents/verification.py','app/agents/base.py','main.py']]; print\\('syntax ok'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app/agents/simulation.py'\\).read\\(\\)\\); print\\('sim parses ok'\\); ast.parse\\(open\\('app/api/router.py'\\).read\\(\\)\\); print\\('router parses ok'\\); ast.parse\\(open\\('app/api/schemas.py'\\).read\\(\\)\\); print\\('schemas parse ok'\\); ast.parse\\(open\\('app/core/models.py'\\).read\\(\\)\\); print\\('models parse ok'\\)\")",
+      "Bash(python -c \"from app.core import models; print\\('tables:', sorted\\(models.Base.metadata.tables.keys\\(\\)\\)\\)\")",
+      "Bash(stat -c \"%s %y\" /c/Users/-/AppData/Local/Temp/claude/c--Users---OneDrive-Desktop-AI-Seekho-Arsalan-/2c3f273d-239b-4404-b64f-6087f4195fe4/tasks/bzwruk5j0.output 2>&1; echo '---'; tail -100 /c/Users/-/AppData/Local/Temp/claude/c--Users---OneDrive-Desktop-AI-Seekho-Arsalan-/2c3f273d-239b-4404-b64f-6087f4195fe4/tasks/bzwruk5j0.output 2>/dev/null)",
+      "Read(//c/Users/-/OneDrive/Desktop/AI-Seekho\\(Arsalan\\)/backend/**)",
+      "Bash(python -c ' *)",
+      "Bash(python scripts/smoke_simulate.py)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://127.0.0.1:8000/)",
+      "Bash(curl -s http://127.0.0.1:8000/)",
+      "PowerShell($env:Path = \"C:\\\\flutter\\\\bin;C:\\\\android-sdk\\\\platform-tools;$env:Path\"; $env:ANDROID_HOME = \"C:\\\\android-sdk\"; $env:ANDROID_SDK_ROOT = \"C:\\\\android-sdk\"; Set-Location C:\\\\ciro-mobile; flutter run -d emulator-5554 2>&1)",
+      "PowerShell(Get-Process java,gradle -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 3; if \\(Test-Path 'C:\\\\ciro-mobile\\\\build'\\) { Remove-Item -Recurse -Force 'C:\\\\ciro-mobile\\\\build' -ErrorAction SilentlyContinue }; Write-Output \"cleaned. build exists: $\\(Test-Path 'C:\\\\ciro-mobile\\\\build'\\)\")"
+    ]
+  }
+}

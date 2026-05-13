@@ -102,3 +102,91 @@ class VerificationLog(Base):
     updated_confidence = Column(Float)
     retraction_message = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class RoadClosure(Base):
+    __tablename__ = "road_closures"
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("crisis_events.id"))
+    label = Column(String)
+    reason = Column(String)
+    from_lat = Column(Float)
+    from_lng = Column(Float)
+    to_lat = Column(Float)
+    to_lng = Column(Float)
+    status = Column(String, default="active")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class DispatchTrack(Base):
+    __tablename__ = "dispatch_tracks"
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("crisis_events.id"))
+    resource_id = Column(Integer, ForeignKey("resources.id"))
+    allocation_id = Column(Integer, ForeignKey("resource_allocations.id"), nullable=True)
+    units = Column(Integer, default=1)
+    from_lat = Column(Float)
+    from_lng = Column(Float)
+    to_lat = Column(Float)
+    to_lng = Column(Float)
+    current_lat = Column(Float)
+    current_lng = Column(Float)
+    eta_minutes = Column(Float)
+    progress = Column(Float, default=0.0)
+    status = Column(String, default="enroute")
+    dispatched_at = Column(DateTime, default=datetime.datetime.utcnow)
+    last_tick_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class AlertZone(Base):
+    __tablename__ = "alert_zones"
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("crisis_events.id"))
+    center_lat = Column(Float)
+    center_lng = Column(Float)
+    radius_km = Column(Float)
+    severity = Column(String)
+    message = Column(String)
+    broadcast_count = Column(Integer, default=0)
+    status = Column(String, default="active")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class EmergencyTicket(Base):
+    __tablename__ = "emergency_tickets"
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("crisis_events.id"))
+    ticket_code = Column(String, index=True)
+    category = Column(String, index=True)
+    priority = Column(String)
+    title = Column(String)
+    description = Column(String)
+    assignee = Column(String)
+    status = Column(String, default="open")
+    eta_minutes = Column(Float, nullable=True)
+    resource_id = Column(Integer, ForeignKey("resources.id"), nullable=True)
+    dispatch_id = Column(Integer, ForeignKey("dispatch_tracks.id"), nullable=True)
+    closure_id = Column(Integer, ForeignKey("road_closures.id"), nullable=True)
+    zone_id = Column(Integer, ForeignKey("alert_zones.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
+
+class AlertLogEntry(Base):
+    __tablename__ = "alert_log_entries"
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("crisis_events.id"), nullable=True)
+    channel = Column(String, index=True)
+    level = Column(String, index=True)
+    title = Column(String)
+    message = Column(String)
+    ticket_id = Column(Integer, ForeignKey("emergency_tickets.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class AgentTrace(Base):
+    __tablename__ = "agent_traces"
+    id = Column(Integer, primary_key=True, index=True)
+    agent = Column(String, index=True)
+    stage = Column(String, index=True)
+    event_id = Column(Integer, ForeignKey("crisis_events.id"), nullable=True)
+    summary = Column(String)
+    reasoning = Column(String)
+    prompt = Column(String, nullable=True)
+    decision = Column(String, nullable=True)
+    status = Column(String, default="ok")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)

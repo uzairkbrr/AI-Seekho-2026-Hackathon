@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api.dart';
+import '../../core/models.dart';
 import '../../core/theme.dart';
+import '../trace/detail_sheet.dart';
 
 class PipelinePage extends StatefulWidget {
   const PipelinePage({super.key});
@@ -12,24 +14,48 @@ class PipelinePage extends StatefulWidget {
 
 class _PipelinePageState extends State<PipelinePage> {
   final List<_Stage> _stages = [
-    _Stage('Ingest', Icons.download_outlined, '/ingest', 'POST', 'Pull from NASA, USGS & Weather APIs'),
-    _Stage('Fuse', Icons.merge_type, '/fuse', 'POST', 'Cluster signals into crisis events via Gemini'),
-    _Stage('Allocate', Icons.shuffle, '/allocate', 'POST', 'Optimize resource dispatch across crises'),
-    _Stage('Simulate', Icons.play_circle_outline, '/simulate', 'POST', 'Predict outcomes and side effects'),
-    _Stage('Notify', Icons.notifications_outlined, '/notify', 'POST', 'Generate stakeholder communications'),
-    _Stage('Verify', Icons.verified_outlined, '/verify', 'POST', 'Detect false positives and escalate'),
+    _Stage('Ingest', Icons.download_outlined, '/ingest', null, 'Pull from NASA, USGS & Weather APIs'),
+    _Stage('Fuse', Icons.merge_type, '/fuse', 'fuse', 'Cluster signals into crisis events via Gemini'),
+    _Stage('Allocate', Icons.shuffle, '/allocate', 'allocate', 'Optimize resource dispatch across crises'),
+    _Stage('Simulate', Icons.play_circle_outline, '/simulate', 'simulate', 'Predict outcomes and side effects'),
+    _Stage('Notify', Icons.notifications_outlined, '/notify', 'notify', 'Generate stakeholder communications'),
+    _Stage('Verify', Icons.verified_outlined, '/verify', 'verify', 'Detect false positives and escalate'),
   ];
 
-  final List<String> _logs = [];
+  final List<_LogEntry> _logs = [];
   bool _running = false;
 
-  Future<void> _run(String path, String label) async {
-    setState(() => _logs.add('▶ Running $label...'));
+  Future<void> _run(_Stage stage) async {
+    final startedAt = DateTime.now().toUtc();
+    setState(() => _logs.add(_LogEntry.info('▶ Running ${stage.label}...')));
     try {
-      final res = await post(path);
-      setState(() => _logs.add('✅ $label complete: ${_summarize(res)}'));
+      final res = await post(stage.path);
+      final traces = await _fetchTraces(stage.stageKey, startedAt);
+      setState(() {
+        _logs.add(_LogEntry.success(
+          '✅ ${stage.label} complete: ${_summarize(res)}',
+          traces: traces,
+        ));
+      });
     } catch (e) {
-      setState(() => _logs.add('❌ $label failed: $e'));
+      setState(() => _logs.add(_LogEntry.error('❌ ${stage.label} failed: $e')));
+    }
+  }
+
+  Future<List<AgentTrace>> _fetchTraces(String? stageKey, DateTime startedAt) async {
+    if (stageKey == null) return const [];
+    try {
+      final since = startedAt.toIso8601String();
+      final data = await get('/traces?stage=$stageKey&since=$since&limit=50');
+      if (data is! List) return const [];
+      final out = data
+          .whereType<Map>()
+          .map((m) => AgentTrace.fromJson(Map<String, dynamic>.from(m)))
+          .toList()
+        ..sort((a, b) => a.id.compareTo(b.id));
+      return out;
+    } catch (_) {
+      return const [];
     }
   }
 
@@ -48,7 +74,7 @@ class _PipelinePageState extends State<PipelinePage> {
       _logs.clear();
     });
     for (final s in _stages) {
-      await _run(s.path, s.label);
+      await _run(s);
       await Future.delayed(const Duration(milliseconds: 500));
     }
     setState(() => _running = false);
@@ -65,7 +91,7 @@ class _PipelinePageState extends State<PipelinePage> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _PipelineFlow(stages: _stages, onTap: (s) => _run(s.path, s.label)),
+                _PipelineFlow(stages: _stages, onTap: _run),
                 const SizedBox(height: 24),
                 if (_logs.isNotEmpty) ...[
                   Text(
@@ -82,22 +108,25 @@ class _PipelinePageState extends State<PipelinePage> {
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: _logs.asMap().entries.map((e) {
-                        final isError = e.value.startsWith('❌');
-                        final isSuccess = e.value.startsWith('✅');
+                      children: _logs.map((entry) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            e.value,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isError
-                                  ? AppColors.red
-                                  : isSuccess
-                                      ? AppColors.green
-                                      : AppColors.textSecondary,
-                              height: 1.5,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                entry.text,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: entry.color,
+                                  height: 1.5,
+                                ),
+                              ),
+                              if (entry.traces.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                ...entry.traces.map(_ReasoningCard.new),
+                              ],
+                            ],
                           ),
                         );
                       }).toList(),
@@ -115,13 +144,175 @@ class _PipelinePageState extends State<PipelinePage> {
   }
 }
 
+class _LogEntry {
+  final String text;
+  final Color color;
+  final List<AgentTrace> traces;
+  const _LogEntry({required this.text, required this.color, this.traces = const []});
+
+  factory _LogEntry.info(String t) =>
+      _LogEntry(text: t, color: AppColors.textSecondary);
+  factory _LogEntry.success(String t, {List<AgentTrace> traces = const []}) =>
+      _LogEntry(text: t, color: AppColors.green, traces: traces);
+  factory _LogEntry.error(String t) => _LogEntry(text: t, color: AppColors.red);
+}
+
+class _ReasoningCard extends StatelessWidget {
+  final AgentTrace trace;
+  const _ReasoningCard(this.trace);
+
+  @override
+  Widget build(BuildContext context) {
+    final isFallback = trace.status == 'fallback';
+    final isSkipped = trace.status == 'skipped';
+    final accent = isFallback
+        ? AppColors.amber
+        : isSkipped
+            ? AppColors.textMuted
+            : AppColors.cyan;
+    final hasPrompt = (trace.prompt ?? '').isNotEmpty;
+    final hasDecision = (trace.decision ?? '').isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 6),
+      child: InkWell(
+        onTap: () => TraceDetailSheet.show(context, trace),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.bg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: accent.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.auto_awesome, size: 11, color: accent),
+                  const SizedBox(width: 6),
+                  Text(
+                    trace.agent.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  if (trace.eventId != null) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '· event #${trace.eventId}',
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: AppColors.textMuted,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  if (isFallback || isSkipped)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        trace.status.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 8,
+                          color: accent,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              if (trace.summary.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  trace.summary,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+              if (trace.reasoning.isNotEmpty) ...[
+                const SizedBox(height: 3),
+                Text(
+                  trace.reasoning,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+              if (hasPrompt || hasDecision) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    if (hasPrompt) ...[
+                      _facet('prompt', AppColors.cyan),
+                      const SizedBox(width: 6),
+                    ],
+                    if (hasDecision) _facet('decision', accent),
+                    const Spacer(),
+                    Text(
+                      'View',
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: accent,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, size: 12, color: accent),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _facet(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 8,
+          color: color,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+}
+
 class _Stage {
   final String label;
   final IconData icon;
   final String path;
-  final String method;
+  final String? stageKey;
   final String description;
-  const _Stage(this.label, this.icon, this.path, this.method, this.description);
+  const _Stage(this.label, this.icon, this.path, this.stageKey, this.description);
 }
 
 class _PipelineFlow extends StatelessWidget {
@@ -250,4 +441,3 @@ class _RunBar extends StatelessWidget {
     );
   }
 }
-

@@ -125,3 +125,96 @@ class VerificationLog(VerificationLogBase):
     created_at: datetime
     class Config:
         from_attributes = True
+
+class RoadClosure(BaseModel):
+    id: int
+    event_id: int
+    label: str
+    reason: str
+    from_lat: float
+    from_lng: float
+    to_lat: float
+    to_lng: float
+    status: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class DispatchTrack(BaseModel):
+    id: int
+    event_id: int
+    resource_id: int
+    allocation_id: Optional[int] = None
+    units: int
+    from_lat: float
+    from_lng: float
+    to_lat: float
+    to_lng: float
+    current_lat: float
+    current_lng: float
+    eta_minutes: float
+    progress: float
+    status: str
+    dispatched_at: datetime
+    class Config:
+        from_attributes = True
+
+class AlertZone(BaseModel):
+    id: int
+    event_id: int
+    center_lat: float
+    center_lng: float
+    radius_km: float
+    severity: str
+    message: str
+    broadcast_count: int
+    status: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class EmergencyTicket(BaseModel):
+    id: int
+    event_id: int
+    ticket_code: str
+    category: str
+    priority: str
+    title: str
+    description: str
+    assignee: str
+    status: str
+    eta_minutes: Optional[float] = None
+    resource_id: Optional[int] = None
+    dispatch_id: Optional[int] = None
+    closure_id: Optional[int] = None
+    zone_id: Optional[int] = None
+    created_at: datetime
+    resolved_at: Optional[datetime] = None
+    class Config:
+        from_attributes = True
+
+class AlertLogEntry(BaseModel):
+    id: int
+    event_id: Optional[int] = None
+    channel: str
+    level: str
+    title: str
+    message: str
+    ticket_id: Optional[int] = None
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class AgentTrace(BaseModel):
+    id: int
+    agent: str
+    stage: str
+    event_id: Optional[int] = None
+    summary: str
+    reasoning: str
+    prompt: Optional[str] = None
+    decision: Optional[str] = None
+    status: str
+    created_at: datetime
+    class Config:
+        from_attributes = True

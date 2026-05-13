@@ -18,6 +18,7 @@ class NotificationAgent(BaseAgent):
         super().__init__("NotificationAgent")
 
     def run(self, db):
+        self.traces = []
         events = db.query(CrisisEvent).filter(CrisisEvent.status == "active").all()
         if not events:
             return {"message": "No events"}
@@ -25,12 +26,14 @@ class NotificationAgent(BaseAgent):
         created = []
         for e in events:
             prompt = f"Generate alerts for: {e.title}. Type: {e.event_type}."
+            status = "ok"
             try:
                 res = json.loads(self.llm.generate(prompt, NotificationResponse, temp=0.2))
                 notifs = res["notifications"]
             except Exception as ex:
                 self.logger.error(f"LLM fail: {ex}")
                 notifs = self._fallback(e)
+                status = "fallback"
 
             for n in notifs:
                 obj = StakeholderNotification(
@@ -43,6 +46,24 @@ class NotificationAgent(BaseAgent):
                 )
                 db.add(obj)
                 created.append(obj)
+                self._record(
+                    db,
+                    stage="notify",
+                    summary=f"[{n['urgency']}/{n['channel']}] → {n['recipient']}: {n['subject']}",
+                    reasoning=n["message"],
+                    event_id=e.id,
+                    status=status,
+                    prompt=prompt,
+                    decision={
+                        "action": "send_notification",
+                        "event_id": e.id,
+                        "recipient": n["recipient"],
+                        "subject": n["subject"],
+                        "urgency": n["urgency"],
+                        "channel": n["channel"],
+                        "message": n["message"],
+                    },
+                )
 
         db.commit()
         return {"count": len(created)}
