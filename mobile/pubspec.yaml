@@ -1,0 +1,26 @@
+name: ciro
+description: Crisis Intelligence & Response Orchestrator — Field Operations App
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^3.3.1
+  http: ^1.6.0
+  google_fonts: ^6.2.1
+  shimmer: ^3.0.0
+  fl_chart: ^0.69.0
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
